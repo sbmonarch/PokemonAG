@@ -2,12 +2,27 @@
 #    2/16/24
 #    Game Functions
 
+"""Game functions for a pokemon style adventure game.
+
+The functions welcomes the player, displays a shop menu and generates a random monster.
+"""
 
 
 import random
 
 def purchase_item(itemPrice: float, startingMoney: float, quantityToPurchase: int = 1):
-    """What can be purchased and the remaining money."""
+    """
+    What can be purchased and the remaining money.
+
+    Parameters:
+        itemPrice (float): Cost per item.
+        startingMoney (float): Player's available money.
+        quantityToPurchase (int): Number of items the player wants to buy (default: 1).
+
+    Returns:
+        Number of items purchased and remaining money.
+
+    """
     max_affordable = int(startingMoney // itemPrice)
     quantity_purchased = min(quantityToPurchase, max_affordable)
     remaining_money = round(startingMoney - (quantity_purchased * itemPrice), 2)
@@ -16,7 +31,13 @@ def purchase_item(itemPrice: float, startingMoney: float, quantityToPurchase: in
 
 
 def new_random_monster():
-    """Pokemon generator."""
+    """
+    Pokemon generator.
+    
+    Returns:
+        A pokemon with a description, health, power and money
+
+"""
     monsters = [
         {
             "name": "Snorlax",
@@ -51,17 +72,34 @@ def new_random_monster():
     }
 
 def print_welcome(name: str):
-    """Welcome message."""
+    """
+    Welcome message.
+    Parameters:
+        The player's name.
+    """
+    
     print(f"{'Hello, ' + name + '!':^20}")
 
 def print_shop_menu(item1Name: str, item1Price: float, item2Name: str, item2Price: float):
-    """Shop Menu"""
+    """
+    Shop Menu
+    
+     Parameters:
+        item1Name: Name of the first item.
+        item1Price: Price of the first item.
+        item2Name: Name of the second item.
+        item2Price: Price of the second item.
+
+    """
     print("+" + "-" * 22 + "+")
     print(f"| {item1Name:<12}${item1Price:>6.2f} |")
     print(f"| {item2Name:<12}${item2Price:>6.2f} |")
     print("+" + "-" * 22 + "+")
 
-    
+
+def test_functions():
+    """ Test all the functions with an output."""
+
     # Print names
 names = ["Ash", "Misty", "Brock"]
 for name in names:
@@ -82,3 +120,10 @@ for _ in range(3):
     print("\nMonster Generated:")
     for key, value in my_monster.items():
         print(f"{key}: {value}")
+        
+    # Test Puchase_item    
+    items_bought, remaining_cash = purchase_item(30.0, 100.0, 3)
+    print(f"\nPurchased {items_bought} items, remaining money: ${remaining_cash}")
+
+if __name__ == "__main__":
+    test_functions()
