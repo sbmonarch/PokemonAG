@@ -1,3 +1,4 @@
+import random
 from gamefunctions import (
     new_random_monster,
     save_game,
@@ -5,13 +6,14 @@ from gamefunctions import (
     use_auto_defeat_item,
     equip_item,
     purchase_item,
-    print_shop_menu
+    print_shop_menu,
+    run_map
 )
-import random
 
 def main():
     hp, money = 500, 100
     inventory = []
+    position = [0, 0]
 
     print("1) Start New Game\n2) Load Game")
     choice = input("Select an option: ").strip()
@@ -22,7 +24,7 @@ def main():
 
     while hp > 0:
         print(f"\nHP: {hp}, Money: {money}")
-        print("1) Fight\n2) Sleep (-5 Money)\n3) Equip Item\n4) Visit Shop\n5) Save & Quit\n6) Quit")
+        print("1) Fight\n2) Sleep (-5 Money)\n3) Equip Item\n4) Visit Shop\n5) Save & Quit\n6) Quit\n7) Visit Map")
         choice = input("Action: ").strip().lower()
 
         if choice in ['1', 'fight']:
@@ -85,8 +87,15 @@ def main():
         elif choice in ['6', 'quit']:
             print("Game over!")
             break
-        else:
-            print("Invalid input. Try again.")
+        elif choice in ['7', 'map', 'visit map']:
+            print("Visiting map...")
+            encounter = run_map(position)  
+            if encounter == "pokemon":
+                print("A Pokémon encounter occurred!")
+            elif encounter == "town":
+                print("You visited the town.")  
+            else:
+                print("Invalid input. Try again.")
 
         if hp <= 0:
             print("You have fainted. Game over.")
@@ -115,6 +124,11 @@ def fight(hp, money, monster, inventory):
         money += monster['money']
         print(f"Defeated {monster['name']}. +{monster['money']} Money!")
     return hp, money
+
+if __name__ == "__main__":
+    main()
+
+
 
 if __name__ == "__main__":
     main()
