@@ -1,14 +1,66 @@
-# Steven Bartoldus
-# 3/30/24
-# Game Functions
+#gamefunctions.py
+#Steven Bartoldus
+#April 13th
 
-"""Game functions for a Pokemon-style adventure game.
-
-The functions welcome the player, display a shop menu, generate random monsters, and handle save/load functionality.
-"""
-
+import pygame
 import random
 import json
+
+GRID_SIZE = 10
+TILE_SIZE = 32
+TOWN_POS = (0, 0)
+POKEMON_POS = (5, 5)
+
+def run_map(position):
+    pygame.init()
+    screen = pygame.display.set_mode((GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE))
+    pygame.display.set_caption("Explore Kinto")
+
+    x, y = position
+    clock = pygame.time.Clock()
+    running = True
+    encounter = None
+
+    while running:
+        screen.fill((255, 255, 255))
+
+        pygame.draw.circle(screen, (0, 255, 0), (TOWN_POS[0] * TILE_SIZE + 16, TOWN_POS[1] * TILE_SIZE + 16), 10)
+        pygame.draw.circle(screen, (255, 0, 0), (POKEMON_POS[0] * TILE_SIZE + 16, POKEMON_POS[1] * TILE_SIZE + 16), 10)
+        pygame.draw.rect(screen, (0, 0, 255), pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP and y > 0:
+                    y -= 1
+                elif event.key == pygame.K_DOWN and y < GRID_SIZE - 1:
+                    y += 1
+                elif event.key == pygame.K_LEFT and x > 0:
+                    x -= 1
+                elif event.key == pygame.K_RIGHT and x < GRID_SIZE - 1:
+                    x += 1
+
+                print(f"You moved to ({x}, {y})")
+
+                if (x, y) == TOWN_POS:
+                    print("You entered a town!")
+                    encounter = "town"
+                    running = False
+                elif (x, y) == POKEMON_POS:
+                    print("A wild Pokémon appeared!")
+                    encounter = "pokemon"
+                    running = False
+
+        clock.tick(10)
+
+    position[0], position[1] = x, y
+    pygame.quit()
+    return encounter
 
 def purchase_item(itemPrice: float, startingMoney: float, quantityToPurchase: int = 1):
     max_affordable = int(startingMoney // itemPrice)
@@ -110,6 +162,10 @@ def test_functions():
 
     items_bought, remaining_cash = purchase_item(30.0, 100.0, 3)
     print(f"\nPurchased {items_bought} items, remaining money: ${remaining_cash}")
+
+test_functions()
+
+
 
 test_functions()
 
