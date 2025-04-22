@@ -1,136 +1,173 @@
+# Steven Bartoldus
+# 3/30/24
+# Game Functions
+
+"""Game functions for a Pokemon-style adventure game.
+
+The functions welcome the player, display a shop menu, generate random monsters, and handle save/load functionality.
+"""
+
 import random
-from gamefunctions import (
-    new_random_monster,
-    save_game,
-    load_game,
-    use_auto_defeat_item,
-    equip_item,
-    purchase_item,
-    print_shop_menu,
-    run_map
-)
+import json
+import random
 
-def main():
-    hp, money = 500, 100
-    inventory = []
-    position = [0, 0]
+GRID_SIZE = 10
+TILE_SIZE = 32
+TOWN_POS = (0, 0)
+POKEMON_POS = (5, 5)
 
-    print("1) Start New Game\n2) Load Game")
-    choice = input("Select an option: ").strip()
+def run_map(position):
+    pygame.init()
+    screen = pygame.display.set_mode((GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE))
+    pygame.display.set_caption("Explore Kinto")
 
-    if choice == "2":
-        filename = input("Enter save file name: ").strip()
-        inventory, money = load_game(filename)
+    x, y = position
+    clock = pygame.time.Clock()
+    running = True
+    encounter = None
 
-    while hp > 0:
-        print(f"\nHP: {hp}, Money: {money}")
-        print("1) Fight\n2) Sleep (-5 Money)\n3) Equip Item\n4) Visit Shop\n5) Save & Quit\n6) Quit\n7) Visit Map")
-        choice = input("Action: ").strip().lower()
+    while running:
+        screen.fill((255, 255, 255))
 
-        if choice in ['1', 'fight']:
-            monster = new_random_monster()
-            print(f"You encounter {monster['name']}!")
-            hp, money = fight(hp, money, monster, inventory)
-        elif choice in ['2', 'sleep']:
-            if money >= 5:
-                hp += 10
-                money -= 5
-                print("You feel refreshed.")
-            else:
-                print("Not enough money!")
-        elif choice in ['3', 'equip item']:
-            item_type = input("Equip a weapon or consumable: ").strip().lower()
-            equipped_item = equip_item(inventory, item_type)
-            if not equipped_item:
-                print("No item equipped.")
-        elif choice in ['4', 'shop', 'visit shop']:
-            items = [
-                ("Pokeball", 25.00, "Greatball", 50.00),
-                ("Quick Claw Knife", 100.00, "Mewtwo Saber", 150.00),
-                ("RazzBerry", 15.00, "NanabBerry", 25.00),
-                ("Antidote", 20.00, "Awakening", 25.00)
-            ]
-            print_shop_menu(items)
-            item = input("Buy Pokeball (1), Greatball (2), Quick Claw Knife (3), Mewtwo Saber (4), RazzBerry (5), NanabBerry (6), Antidote (7), Awakening (8)? ").strip()
+        pygame.draw.circle(screen, (0, 255, 0), (TOWN_POS[0] * TILE_SIZE + 16, TOWN_POS[1] * TILE_SIZE + 16), 10)
+        pygame.draw.circle(screen, (255, 0, 0), (POKEMON_POS[0] * TILE_SIZE + 16, POKEMON_POS[1] * TILE_SIZE + 16), 10)
+        pygame.draw.rect(screen, (0, 0, 255), pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
-            if item == "1":
-                qty, money = purchase_item(25.00, money)
-                if qty: inventory.append({"name": "Pokeball", "type": "misc"}); print("Pokeball added to inventory.")
-            elif item == "2":
-                qty, money = purchase_item(50.00, money)
-                if qty: inventory.append({"name": "Greatball", "type": "misc"}); print("Greatball added to inventory.")
-            elif item == "3":
-                qty, money = purchase_item(100.00, money)
-                if qty: inventory.append({"name": "Quick Claw Knife", "type": "weapon", "maxDurability": 15, "currentDurability": 15}); print("Quick Claw Knife added to inventory.")
-            elif item == "4":
-                qty, money = purchase_item(150.00, money)
-                if qty: inventory.append({"name": "Mewtwo Saber", "type": "consumable", "effect": "auto-defeat"}); print("Mewtwo Saber added to inventory.")
-            elif item == "5":
-                qty, money = purchase_item(15.00, money)
-                if qty: inventory.append({"name": "RazzBerry", "type": "consumable"}); print("RazzBerry added to inventory.")
-            elif item == "6":
-                qty, money = purchase_item(25.00, money)
-                if qty: inventory.append({"name": "NanabBerry", "type": "consumable"}); print("NanabBerry added to inventory.")
-            elif item == "7":
-                qty, money = purchase_item(20.00, money)
-                if qty: inventory.append({"name": "Antidote", "type": "consumable"}); print("Antidote added to inventory.")
-            elif item == "8":
-                qty, money = purchase_item(25.00, money)
-                if qty: inventory.append({"name": "Awakening", "type": "consumable"}); print("Awakening added to inventory.")
-            else:
-                print("No purchase made.")
-        elif choice in ['5', 'save', 'save & quit']:
-            filename = input("Enter save file name: ").strip()
-            save_game(filename, inventory, money)
-            print("Game saved. Goodbye!")
-            break
-        elif choice in ['6', 'quit']:
-            print("Game over!")
-            break
-        elif choice in ['7', 'map', 'visit map']:
-            print("Visiting map...")
-            encounter = run_map(position)  
-            if encounter == "pokemon":
-                print("A Pokémon encounter occurred!")
-            elif encounter == "town":
-                print("You visited the town.")  
-            else:
-                print("Invalid input. Try again.")
+        pygame.display.flip()
 
-        if hp <= 0:
-            print("You have fainted. Game over.")
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
 
-def fight(hp, money, monster, inventory):
-    while hp > 0 and monster['health'] > 0:
-        action = input("1) Attack  2) Run: ").strip().lower()
-        if action == "1":
-            if use_auto_defeat_item(inventory):
-                print("You instantly defeat the monster with an item!")
-                money += monster['money']
-                break
-            else:
-                player_damage = random.randint(50, 99)
-                monster_damage = random.randint(50, 99)
-                monster['health'] -= player_damage
-                hp -= monster_damage
-                print(f"Dealt {player_damage}, took {monster_damage}.")
-        elif action == "2":
-            print("You escaped!")
-            break
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP and y > 0:
+                    y -= 1
+                elif event.key == pygame.K_DOWN and y < GRID_SIZE - 1:
+                    y += 1
+                elif event.key == pygame.K_LEFT and x > 0:
+                    x -= 1
+                elif event.key == pygame.K_RIGHT and x < GRID_SIZE - 1:
+                    x += 1
+
+                print(f"You moved to ({x}, {y})")
+
+                if (x, y) == TOWN_POS:
+                    print("You entered a town!")
+                    encounter = "town"
+                    running = False
+                elif (x, y) == POKEMON_POS:
+                    print("A wild Pokémon appeared!")
+                    encounter = "pokemon"
+                    running = False
+
+        clock.tick(10)
+
+    position[0], position[1] = x, y
+    pygame.quit()
+    return encounter
+
+
+def purchase_item(itemPrice: float, startingMoney: float, quantityToPurchase: int = 1):
+    max_affordable = int(startingMoney // itemPrice)
+    quantity_purchased = min(quantityToPurchase, max_affordable)
+    remaining_money = round(startingMoney - (quantity_purchased * itemPrice), 2)
+    return quantity_purchased, remaining_money
+
+def new_random_monster():
+    monsters = [
+        {"name": "Snorlax", "description": "A sleepy Pokemon blocking your path.", "health_range": (220, 280), "power_range": (70, 110), "money_range": (30, 130)},
+        {"name": "Charizard", "description": "A dragon-like Pokemon with fire breath.", "health_range": (150, 250), "power_range": (80, 120), "money_range": (50, 150)},
+        {"name": "Mewtwo", "description": "A powerful psychic Pokemon.", "health_range": (200, 330), "power_range": (170, 220), "money_range": (40, 170)}
+    ]
+    monster = random.choice(monsters)
+    return {
+        "name": monster["name"],
+        "description": monster["description"],
+        "health": random.randint(*monster["health_range"]),
+        "power": random.randint(*monster["power_range"]),
+        "money": round(random.uniform(*monster["money_range"]), 2)
+    }
+
+def equip_item(inventory, item_type):
+    relevant_items = [item for item in inventory if item['type'] == item_type]
+
+    if not relevant_items:
+        print(f"No {item_type}s to equip.")
+        return None
+
+    print("Available items to equip:")
+    for index, item in enumerate(relevant_items, start=1):
+        print(f"{index}) {item['name']}")
+
+    item_choice = input("Select an item to equip: ").strip()
+    try:
+        item_choice = int(item_choice) - 1
+        if 0 <= item_choice < len(relevant_items):
+            for item in inventory:
+                item['equipped'] = False
+            equipped_item = relevant_items[item_choice]
+            equipped_item['equipped'] = True
+            print(f"{equipped_item['name']} equipped!")
+            return equipped_item['name']
         else:
-            print("Invalid input. Try again.")
+            print("Invalid selection.")
+            return None
+    except ValueError:
+        print("Invalid input. Please select a valid item.")
+        return None
 
-    if monster['health'] <= 0:
-        money += monster['money']
-        print(f"Defeated {monster['name']}. +{monster['money']} Money!")
-    return hp, money
+def use_auto_defeat_item(inventory: list):
+    for item in inventory:
+        if item.get("type") == "consumable" and item.get("effect") == "auto-defeat":
+            inventory.remove(item)
+            print("The Mewtwo Saber activates and defeats the monster!")
+            return True
+    return False
 
-if __name__ == "__main__":
-    main()
+def print_welcome(name: str):
+    print(f"{'Hello, ' + name + '!':^20}")
 
+def print_shop_menu(items):
+    print("+" + "-" * 22 + "+")
+    for item1, price1, item2, price2 in items:
+        print(f"| {item1:<15} ${price1:>6.2f} | {item2:<15} ${price2:>6.2f} |")
+    print("+" + "-" * 22 + "+")
 
+def save_game(filename: str, inventory: dict, money: float):
+    with open(filename, 'w') as file:
+        json.dump({"inventory": inventory, "money": money}, file)
+    print("Game saved successfully.")
 
-if __name__ == "__main__":
-    main()
+def load_game(filename: str) -> tuple:
+    try:
+        with open(filename, 'r') as file:
+            data = json.load(file)
+        return data.get("inventory", []), data.get("money", 0.0)
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("Failed to load game. Starting a new game.")
+        return [], 0.0
 
+def test_functions():
+    for name in ["Ash", "Misty", "Brock"]:
+        print_welcome(name)
+
+    for items in [
+        ("Quick Claw Knife", 50.00, "Mewtwo Saber", 75.00),
+        ("Pokeball", 25.00, "Greatball", 50.00),
+        ("RazzBerry", 15.00, "NanabBerry", 25.00),
+        ("Antidote", 20.00, "Awakening", 25.00)
+    ]:
+        print_shop_menu([items])
+
+    for _ in range(3):
+        monster = new_random_monster()
+        print("\nMonster Generated:")
+        for key, value in monster.items():
+            print(f"{key}: {value}")
+
+    items_bought, remaining_cash = purchase_item(30.0, 100.0, 3)
+    print(f"\nPurchased {items_bought} items, remaining money: ${remaining_cash}")
+
+test_functions()
 
