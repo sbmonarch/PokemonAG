@@ -1,17 +1,17 @@
-#gamefunctions.py
-#Steven Bartoldus
+#gamefunctions.py 
+#Steven Bartoldus 
 #April 13th
 
-import pygame
 import random
 import json
+import pygame
+from wanderingMonster import WanderingMonster, create_random_monsters
 
 GRID_SIZE = 10
 TILE_SIZE = 32
 TOWN_POS = (0, 0)
-POKEMON_POS = (5, 5)
 
-def run_map(position):
+def run_map(position, monsters=None):
     pygame.init()
     screen = pygame.display.set_mode((GRID_SIZE * TILE_SIZE, GRID_SIZE * TILE_SIZE))
     pygame.display.set_caption("Explore Kinto")
@@ -20,13 +20,27 @@ def run_map(position):
     clock = pygame.time.Clock()
     running = True
     encounter = None
+    
+    if monsters is None:
+        monsters = create_random_monsters()
+    
+    move_counter = 0
 
     while running:
         screen.fill((255, 255, 255))
 
-        pygame.draw.circle(screen, (0, 255, 0), (TOWN_POS[0] * TILE_SIZE + 16, TOWN_POS[1] * TILE_SIZE + 16), 10)
-        pygame.draw.circle(screen, (255, 0, 0), (POKEMON_POS[0] * TILE_SIZE + 16, POKEMON_POS[1] * TILE_SIZE + 16), 10)
-        pygame.draw.rect(screen, (0, 0, 255), pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+        pygame.draw.circle(screen, (0, 255, 0), 
+                         (TOWN_POS[0] * TILE_SIZE + 16, 
+                          TOWN_POS[1] * TILE_SIZE + 16), 10)
+        
+        pygame.draw.rect(screen, (0, 0, 255), 
+                        pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, 
+                                   TILE_SIZE, TILE_SIZE))
+        
+        for monster in monsters:
+            pygame.draw.circle(screen, monster.color,
+                             (monster.position[0] * TILE_SIZE + 16,
+                              monster.position[1] * TILE_SIZE + 16), 10)
 
         pygame.display.flip()
 
@@ -36,52 +50,54 @@ def run_map(position):
                 exit()
 
             elif event.type == pygame.KEYDOWN:
+                new_x, new_y = x, y
                 if event.key == pygame.K_UP and y > 0:
-                    y -= 1
+                    new_y -= 1
                 elif event.key == pygame.K_DOWN and y < GRID_SIZE - 1:
-                    y += 1
+                    new_y += 1
                 elif event.key == pygame.K_LEFT and x > 0:
-                    x -= 1
+                    new_x -= 1
                 elif event.key == pygame.K_RIGHT and x < GRID_SIZE - 1:
-                    x += 1
-
-                print(f"You moved to ({x}, {y})")
+                    new_x += 1
+                else:
+                    continue
+                
+                for monster in monsters[:]:
+                    if (new_x, new_y) == monster.position:
+                        encounter = {"type": "monster", "monster": monster}
+                        monsters.remove(monster)
+                        running = False
+                        break
+                
+                if not encounter:
+                    x, y = new_x, new_y
+                    move_counter += 1
+                    
+                    if move_counter % 2 == 0:
+                        for monster in monsters:
+                            monster.move()
+                            
+                            if (x, y) == monster.position:
+                                encounter = {"type": "monster", "monster": monster}
+                                monsters.remove(monster)
+                                running = False
+                                break
 
                 if (x, y) == TOWN_POS:
-                    print("You entered a town!")
-                    encounter = "town"
-                    running = False
-                elif (x, y) == POKEMON_POS:
-                    print("A wild Pokémon appeared!")
-                    encounter = "pokemon"
+                    encounter = {"type": "town"}
                     running = False
 
         clock.tick(10)
 
     position[0], position[1] = x, y
     pygame.quit()
-    return encounter
+    return encounter, monsters
 
-def purchase_item(itemPrice: float, startingMoney: float, quantityToPurchase: int = 1):
+def purchase_item(itemPrice, startingMoney, quantityToPurchase=1):
     max_affordable = int(startingMoney // itemPrice)
     quantity_purchased = min(quantityToPurchase, max_affordable)
     remaining_money = round(startingMoney - (quantity_purchased * itemPrice), 2)
     return quantity_purchased, remaining_money
-
-def new_random_monster():
-    monsters = [
-        {"name": "Snorlax", "description": "A sleepy Pokemon blocking your path.", "health_range": (220, 280), "power_range": (70, 110), "money_range": (30, 130)},
-        {"name": "Charizard", "description": "A dragon-like Pokemon with fire breath.", "health_range": (150, 250), "power_range": (80, 120), "money_range": (50, 150)},
-        {"name": "Mewtwo", "description": "A powerful psychic Pokemon.", "health_range": (200, 330), "power_range": (170, 220), "money_range": (40, 170)}
-    ]
-    monster = random.choice(monsters)
-    return {
-        "name": monster["name"],
-        "description": monster["description"],
-        "health": random.randint(*monster["health_range"]),
-        "power": random.randint(*monster["power_range"]),
-        "money": round(random.uniform(*monster["money_range"]), 2)
-    }
 
 def equip_item(inventory, item_type):
     relevant_items = [item for item in inventory if item['type'] == item_type]
@@ -111,7 +127,7 @@ def equip_item(inventory, item_type):
         print("Invalid input. Please select a valid item.")
         return None
 
-def use_auto_defeat_item(inventory: list):
+def use_auto_defeat_item(inventory):
     for item in inventory:
         if item.get("type") == "consumable" and item.get("effect") == "auto-defeat":
             inventory.remove(item)
@@ -119,7 +135,7 @@ def use_auto_defeat_item(inventory: list):
             return True
     return False
 
-def print_welcome(name: str):
+def print_welcome(name):
     print(f"{'Hello, ' + name + '!':^20}")
 
 def print_shop_menu(items):
@@ -128,45 +144,23 @@ def print_shop_menu(items):
         print(f"| {item1:<15} ${price1:>6.2f} | {item2:<15} ${price2:>6.2f} |")
     print("+" + "-" * 22 + "+")
 
-def save_game(filename: str, inventory: dict, money: float):
+def save_game(filename, inventory, money, monsters=None):
+    data = {
+        "inventory": inventory,
+        "money": money,
+        "monsters": [m.to_dict() for m in monsters] if monsters else []
+    }
     with open(filename, 'w') as file:
-        json.dump({"inventory": inventory, "money": money}, file)
+        json.dump(data, file)
     print("Game saved successfully.")
 
-def load_game(filename: str) -> tuple:
+def load_game(filename):
     try:
         with open(filename, 'r') as file:
             data = json.load(file)
-        return data.get("inventory", []), data.get("money", 0.0)
+        
+        monsters = [WanderingMonster.from_dict(m) for m in data.get("monsters", [])]
+        return data.get("inventory", []), data.get("money", 0.0), monsters
     except (FileNotFoundError, json.JSONDecodeError):
         print("Failed to load game. Starting a new game.")
-        return [], 0.0
-
-def test_functions():
-    for name in ["Ash", "Misty", "Brock"]:
-        print_welcome(name)
-
-    for items in [
-        ("Quick Claw Knife", 50.00, "Mewtwo Saber", 75.00),
-        ("Pokeball", 25.00, "Greatball", 50.00),
-        ("RazzBerry", 15.00, "NanabBerry", 25.00),
-        ("Antidote", 20.00, "Awakening", 25.00)
-    ]:
-        print_shop_menu([items])
-
-    for _ in range(3):
-        monster = new_random_monster()
-        print("\nMonster Generated:")
-        for key, value in monster.items():
-            print(f"{key}: {value}")
-
-    items_bought, remaining_cash = purchase_item(30.0, 100.0, 3)
-    print(f"\nPurchased {items_bought} items, remaining money: ${remaining_cash}")
-
-test_functions()
-
-
-
-test_functions()
-
-
+        return [], 0.0, []
